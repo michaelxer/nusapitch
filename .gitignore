@@ -1,0 +1,61 @@
+# Handoff and credentials
+HANDOFF_DOC/
+.credentials/
+private/
+NusaPitch_full_agent_prompt.md
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Local app data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local runtime folders
+imports_original/
+exports/
+backups/
+cache/
+temp/
+logs/
+local_profiles/
+local_imports/
+local_exports/
+local_backups/
+
+# Real uploaded/imported/exported files
+*.xlsx
+*.xls
+*.csv
+*.jsonl
+
+# Allow fake public samples
+!sample_leads/
+!sample_leads/*.csv
+!sample_profiles/
+!sample_profiles/*.json
+!config.example.json
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

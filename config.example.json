@@ -1,0 +1,23 @@
+{
+  "app": {
+    "timezone": "Asia/Jakarta",
+    "database_path": "data/app.db",
+    "dry_run_by_default": true
+  },
+  "sending_limits": {
+    "sender_email_daily_limit": 20,
+    "sender_domain_daily_limit": 30,
+    "campaign_daily_limit": 10,
+    "min_delay_seconds": 45,
+    "max_delay_seconds": 180
+  },
+  "llm": {
+    "provider_name": "OpenAI-compatible",
+    "base_url": "https://api.example.com/v1",
+    "model_name": "example-chat-model",
+    "temperature": 0.3,
+    "max_tokens": 1200,
+    "timeout_seconds": 60,
+    "retry_count": 1
+  }
+}

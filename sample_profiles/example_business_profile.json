@@ -1,0 +1,17 @@
+{
+  "business_name": "Example Export Co.",
+  "brand_name": "Example Export",
+  "website": "https://example.com",
+  "company_description": "A sample B2B supplier profile used for demos and tests.",
+  "country": "Indonesia",
+  "city_region": "Surabaya",
+  "business_address": "Example Industrial Area",
+  "company_phone": "+62 000 0000 0000",
+  "company_email": "sales@example.com",
+  "company_linkedin": "",
+  "business_type": "Supplier",
+  "target_market": "B2B export",
+  "value_proposition": "Reliable export support for sample industrial materials.",
+  "credibility_points": "Sample documents available, export packing support, responsive sales team.",
+  "private_notes": "Fake demo profile only."
+}
