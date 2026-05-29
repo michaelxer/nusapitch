@@ -7,6 +7,9 @@ from typing import Any, Iterable
 from .paths import default_db_path, ensure_runtime_dirs
 
 
+SCHEMA_VERSION = 1
+
+
 SCHEMA_STATEMENTS = [
     """
     CREATE TABLE IF NOT EXISTS app_settings (
@@ -308,6 +311,15 @@ SCHEMA_STATEMENTS = [
 ]
 
 
+MIGRATIONS = [
+    {
+        "version": 1,
+        "name": "initial_core_schema",
+        "statements": SCHEMA_STATEMENTS,
+    }
+]
+
+
 def connect(db_path: str | Path | None = None) -> sqlite3.Connection:
     ensure_runtime_dirs()
     path = Path(db_path) if db_path else default_db_path()
@@ -321,10 +333,46 @@ def init_db(db_path: str | Path | None = None) -> Path:
     path = Path(db_path) if db_path else default_db_path()
     ensure_runtime_dirs()
     with connect(path) as conn:
-        for statement in SCHEMA_STATEMENTS:
-            conn.execute(statement)
-        conn.commit()
+        apply_migrations(conn)
     return path
+
+
+def apply_migrations(conn: sqlite3.Connection) -> int:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            applied_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    applied = {
+        int(row["version"])
+        for row in conn.execute("SELECT version FROM schema_migrations").fetchall()
+    }
+    for migration in MIGRATIONS:
+        version = int(migration["version"])
+        if version in applied:
+            continue
+        for statement in migration["statements"]:
+            conn.execute(statement)
+        conn.execute(
+            "INSERT INTO schema_migrations (version, name) VALUES (?, ?)",
+            (version, str(migration["name"])),
+        )
+        conn.execute(f"PRAGMA user_version = {version}")
+    conn.commit()
+    return get_schema_version(conn)
+
+
+def get_schema_version(conn: sqlite3.Connection) -> int:
+    row = conn.execute("PRAGMA user_version").fetchone()
+    user_version = int(row[0] if row else 0)
+    if user_version:
+        return user_version
+    row = conn.execute("SELECT MAX(version) FROM schema_migrations").fetchone()
+    return int(row[0] or 0)
 
 
 def fetch_all(conn: sqlite3.Connection, query: str, params: Iterable[Any] = ()) -> list[sqlite3.Row]:
