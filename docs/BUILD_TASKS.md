@@ -25,7 +25,7 @@
 - [ ] Add persistent send queue.
 - [ ] Add daily send ledger and limit checks.
 - [x] Add SMTP sending in dry-run-safe flow.
-- [ ] Add IMAP Sent save.
+- [x] Add IMAP Sent save.
 - [ ] Add reply/bounce checking.
 - [ ] Add exports and backups.
 - [ ] Add privacy audit command.

@@ -54,12 +54,12 @@ Upload leads
 - Sender/domain/campaign limit calculation
 - Dry-run send recording
 - Confirmed SMTP send flow with sent history and ledger persistence
+- Optional IMAP Sent-folder save result tracking
 - Privacy scanner for public files
 - Initial pytest coverage
 
 ## Planned V1 Work
 
-- IMAP Sent save
 - Reply and bounce checking
 - Suppression list UI
 - Backup and export actions

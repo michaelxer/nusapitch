@@ -63,17 +63,47 @@ def test_real_send_records_ledger_and_history(tmp_path, monkeypatch):
             assert message["To"] == "buyer@example.test"
             return "<smtp-id@example.test>", "SMTP send accepted"
 
+        def fake_save_to_sent(account, message):
+            assert account["enable_save_to_sent"] == 1
+            return "Saved to IMAP Sent"
+
         monkeypatch.setattr(send_queue.email_client, "send_smtp", fake_send_smtp)
+        monkeypatch.setattr(send_queue.email_client, "save_to_sent", fake_save_to_sent)
 
         ok, messages = send_queue.send_real_email(conn, 1, confirm_real_send=True)
 
         queue_status = conn.execute("SELECT status FROM send_queue WHERE send_queue_id = 1").fetchone()["status"]
-        history_count = conn.execute("SELECT COUNT(*) FROM sent_history").fetchone()[0]
+        history = conn.execute("SELECT imap_save_result FROM sent_history").fetchone()
         ledger = conn.execute("SELECT status, smtp_message_id FROM daily_send_ledger").fetchone()
 
     assert ok
-    assert messages == ["SMTP send accepted"]
+    assert messages == ["SMTP send accepted", "Saved to IMAP Sent"]
     assert queue_status == "sent"
-    assert history_count == 1
+    assert history["imap_save_result"] == "Saved to IMAP Sent"
     assert ledger["status"] == "sent"
     assert ledger["smtp_message_id"] == "<smtp-id@example.test>"
+
+
+def test_imap_save_failure_is_recorded_after_smtp_success(tmp_path, monkeypatch):
+    db_path = tmp_path / "app.db"
+    db.init_db(db_path)
+
+    with db.connect(db_path) as conn:
+        _seed_queued_email(conn)
+        monkeypatch.setattr(
+            send_queue.email_client,
+            "send_smtp",
+            lambda account, message: ("<smtp-id@example.test>", "SMTP send accepted"),
+        )
+
+        def fail_save_to_sent(account, message):
+            raise ValueError("folder unavailable")
+
+        monkeypatch.setattr(send_queue.email_client, "save_to_sent", fail_save_to_sent)
+
+        ok, messages = send_queue.send_real_email(conn, 1, confirm_real_send=True)
+        history = conn.execute("SELECT imap_save_result FROM sent_history").fetchone()
+
+    assert ok
+    assert messages == ["SMTP send accepted", "IMAP save failed: folder unavailable"]
+    assert history["imap_save_result"] == "IMAP save failed: folder unavailable"

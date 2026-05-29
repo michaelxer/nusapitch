@@ -4,6 +4,7 @@ import imaplib
 import os
 import smtplib
 import sqlite3
+import time
 from email.message import EmailMessage
 from email.utils import formatdate, getaddresses, make_msgid
 
@@ -86,3 +87,23 @@ def send_smtp(account: sqlite3.Row, message: EmailMessage) -> tuple[str, str]:
     if refused:
         return message_id, f"Partial SMTP refusal: {refused}"
     return message_id, "SMTP send accepted"
+
+
+def save_to_sent(account: sqlite3.Row, message: EmailMessage) -> str:
+    password = os.getenv(account["password_env_name"], "")
+    if not password:
+        raise ValueError(f"Missing password environment variable: {account['password_env_name']}")
+    if account["imap_security"].upper() != "SSL":
+        raise ValueError("Only IMAP SSL is supported in v1.")
+
+    with imaplib.IMAP4_SSL(account["imap_host"], int(account["imap_port"])) as client:
+        client.login(account["sender_email"], password)
+        status, _ = client.append(
+            account["sent_folder_name"],
+            None,
+            imaplib.Time2Internaldate(time.time()),
+            message.as_bytes(),
+        )
+    if status != "OK":
+        raise ValueError(f"IMAP append returned {status}")
+    return "Saved to IMAP Sent"

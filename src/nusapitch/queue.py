@@ -206,8 +206,19 @@ def send_real_email(
         conn.commit()
         return False, [error]
 
-    _record_successful_send(conn, item, smtp_message_id, smtp_result, timezone)
-    return True, [smtp_result]
+    imap_save_result = ""
+    if account["enable_save_to_sent"]:
+        try:
+            imap_save_result = email_client.save_to_sent(account, message)
+        except Exception as exc:  # noqa: BLE001
+            imap_save_result = f"IMAP save failed: {exc}"
+            db.audit(conn, "imap_save_failed", imap_save_result, "send_queue", str(send_queue_id))
+
+    _record_successful_send(conn, item, smtp_message_id, smtp_result, imap_save_result, timezone)
+    messages = [smtp_result]
+    if imap_save_result:
+        messages.append(imap_save_result)
+    return True, messages
 
 
 def _count_ledger(conn: sqlite3.Connection, condition: str, params: tuple[object, ...]) -> int:
@@ -256,6 +267,7 @@ def _record_successful_send(
     item: sqlite3.Row,
     smtp_message_id: str,
     smtp_result: str,
+    imap_save_result: str,
     timezone: str,
 ) -> None:
     now_local = datetime.now(ZoneInfo(timezone))
@@ -290,9 +302,9 @@ def _record_successful_send(
         """
         INSERT INTO sent_history (
             send_queue_id, lead_id, campaign_id, sender_email, recipient_email, subject, body,
-            sent_at_utc, smtp_message_id, app_message_id, smtp_result
+            sent_at_utc, smtp_message_id, app_message_id, smtp_result, imap_save_result
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             item["send_queue_id"],
@@ -306,6 +318,7 @@ def _record_successful_send(
             smtp_message_id,
             app_message_id,
             smtp_result,
+            imap_save_result,
         ),
     )
     conn.execute(
