@@ -22,6 +22,110 @@ ensure_runtime_dirs()
 DB_PATH = db.init_db()
 
 
+FIELD_SPECS = {
+    "business_profiles": [
+        {"name": "business_name", "label": "Business name", "kind": "text"},
+        {"name": "brand_name", "label": "Brand name", "kind": "text"},
+        {"name": "website", "label": "Website", "kind": "text"},
+        {"name": "company_description", "label": "Company description", "kind": "textarea"},
+        {"name": "country", "label": "Country", "kind": "text"},
+        {"name": "city_region", "label": "City/region", "kind": "text"},
+        {"name": "business_address", "label": "Business address", "kind": "text"},
+        {"name": "company_phone", "label": "Company phone", "kind": "text"},
+        {"name": "company_email", "label": "Company email", "kind": "text"},
+        {"name": "company_linkedin", "label": "Company LinkedIn", "kind": "text"},
+        {"name": "business_type", "label": "Business type", "kind": "text"},
+        {"name": "target_market", "label": "Target market", "kind": "text"},
+        {"name": "value_proposition", "label": "Value proposition", "kind": "textarea"},
+        {"name": "credibility_points", "label": "Credibility points", "kind": "textarea"},
+        {"name": "private_notes", "label": "Private notes", "kind": "textarea"},
+    ],
+    "product_service_profiles": [
+        {
+            "name": "business_profile_id",
+            "label": "Business profile",
+            "kind": "fk",
+            "table": "business_profiles",
+            "id_col": "business_profile_id",
+            "label_col": "business_name",
+        },
+        {"name": "name", "label": "Name", "kind": "text"},
+        {"name": "category", "label": "Category", "kind": "text"},
+        {"name": "description", "label": "Description", "kind": "textarea"},
+        {"name": "ideal_customer", "label": "Ideal customer", "kind": "textarea"},
+        {"name": "use_cases", "label": "Use cases", "kind": "textarea"},
+        {"name": "proof_points", "label": "Proof points", "kind": "textarea"},
+        {"name": "constraints", "label": "Constraints", "kind": "textarea"},
+    ],
+    "sender_profiles": [
+        {"name": "sender_name", "label": "Sender name", "kind": "text"},
+        {"name": "sender_position", "label": "Sender position", "kind": "text"},
+        {"name": "sender_email", "label": "Sender email", "kind": "text"},
+        {"name": "sender_phone", "label": "Sender phone", "kind": "text"},
+        {"name": "sender_linkedin", "label": "Sender LinkedIn", "kind": "text"},
+        {"name": "signature", "label": "Signature", "kind": "textarea"},
+        {"name": "opt_out_line", "label": "Opt-out line", "kind": "text"},
+    ],
+    "campaigns": [
+        {"name": "campaign_name", "label": "Campaign name", "kind": "text"},
+        {
+            "name": "business_profile_id",
+            "label": "Business profile",
+            "kind": "fk",
+            "table": "business_profiles",
+            "id_col": "business_profile_id",
+            "label_col": "business_name",
+        },
+        {
+            "name": "sender_profile_id",
+            "label": "Sender profile",
+            "kind": "fk",
+            "table": "sender_profiles",
+            "id_col": "sender_profile_id",
+            "label_col": "sender_email",
+        },
+        {
+            "name": "product_service_profile_id",
+            "label": "Product/service",
+            "kind": "fk",
+            "table": "product_service_profiles",
+            "id_col": "product_service_profile_id",
+            "label_col": "name",
+        },
+        {"name": "sender_email_daily_limit", "label": "Sender email daily limit", "kind": "int", "min": 1},
+        {"name": "sender_domain_daily_limit", "label": "Sender domain daily limit", "kind": "int", "min": 1},
+        {"name": "campaign_daily_limit", "label": "Campaign daily limit", "kind": "int", "min": 1},
+        {"name": "mode", "label": "Mode", "kind": "choice", "choices": ["review", "draft-only", "auto-send"]},
+    ],
+    "llm_settings": [
+        {"name": "provider_name", "label": "Provider name", "kind": "text"},
+        {"name": "base_url", "label": "Base URL", "kind": "text"},
+        {"name": "secret_env_name", "label": "LLM secret env var", "kind": "text"},
+        {"name": "model_name", "label": "Model name", "kind": "text"},
+        {"name": "temperature", "label": "Temperature", "kind": "float", "min": 0.0, "max": 1.0, "step": 0.1},
+        {"name": "max_tokens", "label": "Max tokens", "kind": "int", "min": 100},
+        {"name": "timeout_seconds", "label": "Timeout seconds", "kind": "int", "min": 5},
+        {"name": "retry_count", "label": "Retry count", "kind": "int", "min": 0},
+    ],
+    "email_accounts": [
+        {"name": "account_name", "label": "Account name", "kind": "text"},
+        {"name": "sender_email", "label": "Sender email", "kind": "text"},
+        {"name": "password_env_name", "label": "Email secret env var", "kind": "text"},
+        {"name": "smtp_host", "label": "SMTP host", "kind": "text"},
+        {"name": "smtp_port", "label": "SMTP port", "kind": "int", "min": 1},
+        {"name": "smtp_security", "label": "SMTP security", "kind": "choice", "choices": ["SSL", "STARTTLS", "NONE"]},
+        {"name": "imap_host", "label": "IMAP host", "kind": "text"},
+        {"name": "imap_port", "label": "IMAP port", "kind": "int", "min": 1},
+        {"name": "imap_security", "label": "IMAP security", "kind": "choice", "choices": ["SSL"]},
+        {"name": "sent_folder_name", "label": "Sent folder", "kind": "text"},
+        {"name": "inbox_folder_name", "label": "Inbox folder", "kind": "text"},
+        {"name": "enable_save_to_sent", "label": "Save to IMAP Sent", "kind": "bool"},
+        {"name": "enable_bcc_self_backup", "label": "BCC self backup", "kind": "bool"},
+        {"name": "bcc_backup_email", "label": "BCC backup email", "kind": "text"},
+    ],
+}
+
+
 def connection():
     return db.connect(DB_PATH)
 
@@ -116,7 +220,7 @@ def profile_page(conn) -> None:
             if st.form_submit_button("Save business profile"):
                 profiles.create_record(conn, "business_profiles", data)
                 st.success("Business profile saved.")
-        show_records(conn, "business_profiles")
+        manage_records(conn, "business_profiles", "business_profile_id", ["business_name", "website"], FIELD_SPECS["business_profiles"])
 
     with tabs[1]:
         st.subheader("Product/Service Profiles")
@@ -135,7 +239,7 @@ def profile_page(conn) -> None:
             if st.form_submit_button("Save product/service"):
                 profiles.create_record(conn, "product_service_profiles", data)
                 st.success("Product/service profile saved.")
-        show_records(conn, "product_service_profiles")
+        manage_records(conn, "product_service_profiles", "product_service_profile_id", ["name", "category"], FIELD_SPECS["product_service_profiles"])
 
     with tabs[2]:
         st.subheader("Sender Profiles")
@@ -152,7 +256,7 @@ def profile_page(conn) -> None:
             if st.form_submit_button("Save sender profile"):
                 profiles.create_record(conn, "sender_profiles", data)
                 st.success("Sender profile saved.")
-        show_records(conn, "sender_profiles")
+        manage_records(conn, "sender_profiles", "sender_profile_id", ["sender_name", "sender_email"], FIELD_SPECS["sender_profiles"])
 
     with tabs[3]:
         st.subheader("Campaigns")
@@ -173,7 +277,7 @@ def profile_page(conn) -> None:
             if st.form_submit_button("Save campaign"):
                 profiles.create_record(conn, "campaigns", data)
                 st.success("Campaign saved.")
-        show_records(conn, "campaigns")
+        manage_records(conn, "campaigns", "campaign_id", ["campaign_name", "mode"], FIELD_SPECS["campaigns"])
 
 
 def settings_page(conn) -> None:
@@ -198,7 +302,7 @@ def settings_page(conn) -> None:
         if st.button("Test LLM connection"):
             ok, message = ai.test_llm_connection(conn)
             st.success(message) if ok else st.error(message)
-        show_query(conn, "SELECT llm_settings_id, provider_name, base_url, secret_env_name, model_name, is_active FROM llm_settings ORDER BY llm_settings_id DESC")
+        manage_records(conn, "llm_settings", "llm_settings_id", ["provider_name", "model_name"], FIELD_SPECS["llm_settings"])
 
     with tabs[1]:
         st.subheader("SMTP/IMAP Email Account")
@@ -223,7 +327,7 @@ def settings_page(conn) -> None:
             if st.form_submit_button("Save email account"):
                 profiles.create_record(conn, "email_accounts", data)
                 st.success("Email account saved.")
-        show_query(conn, "SELECT email_account_id, account_name, sender_email, password_env_name, smtp_host, smtp_port, imap_host, imap_port FROM email_accounts ORDER BY email_account_id DESC")
+        manage_records(conn, "email_accounts", "email_account_id", ["account_name", "sender_email"], FIELD_SPECS["email_accounts"])
 
 
 def lead_import_page(conn) -> None:
@@ -380,6 +484,148 @@ def select_or_none(label: str, options: dict[int, str]) -> int | None:
         st.selectbox(label, ["No records available"], disabled=True)
         return None
     return st.selectbox(label, list(options.keys()), format_func=options.get)
+
+
+def manage_records(conn, table: str, id_col: str, label_cols: list[str], fields: list[dict]) -> None:
+    rows = profiles.list_records(conn, table, include_archived=True)
+    show_rows(rows)
+    if not rows:
+        return
+
+    st.markdown("#### Manage existing")
+    options = {int(row[id_col]): record_label(row, id_col, label_cols) for row in rows}
+    record_id = st.selectbox(
+        "Record",
+        list(options.keys()),
+        format_func=options.get,
+        key=f"manage_select_{table}",
+    )
+    record = profiles.get_record(conn, table, record_id)
+    if record is None:
+        st.warning("Selected record no longer exists.")
+        return
+
+    values = dict(record)
+    with st.form(f"manage_form_{table}_{record_id}"):
+        data = render_record_fields(conn, fields, values, f"manage_{table}_{record_id}")
+        button_cols = st.columns(5)
+        with button_cols[0]:
+            update_clicked = st.form_submit_button("Update")
+        with button_cols[1]:
+            duplicate_clicked = st.form_submit_button("Duplicate")
+        archive_clicked = restore_clicked = False
+        deactivate_clicked = reactivate_clicked = False
+        if "is_archived" in values:
+            archived = bool(values["is_archived"])
+            with button_cols[2]:
+                if archived:
+                    restore_clicked = st.form_submit_button("Restore")
+                else:
+                    archive_clicked = st.form_submit_button("Archive")
+        if "is_active" in values:
+            active = bool(values["is_active"])
+            with button_cols[3]:
+                if active:
+                    deactivate_clicked = st.form_submit_button("Deactivate")
+                else:
+                    reactivate_clicked = st.form_submit_button("Reactivate")
+
+    if update_clicked:
+        profiles.update_record(conn, table, record_id, data)
+        st.success("Record updated.")
+        st.rerun()
+    if duplicate_clicked:
+        new_id = profiles.duplicate_record(conn, table, record_id)
+        st.success(f"Record duplicated: {new_id}.")
+        st.rerun()
+    if archive_clicked:
+        profiles.archive_record(conn, table, record_id)
+        st.success("Record archived.")
+        st.rerun()
+    if restore_clicked:
+        profiles.restore_record(conn, table, record_id)
+        st.success("Record restored.")
+        st.rerun()
+    if deactivate_clicked:
+        profiles.set_record_active(conn, table, record_id, False)
+        st.success("Record deactivated.")
+        st.rerun()
+    if reactivate_clicked:
+        profiles.set_record_active(conn, table, record_id, True)
+        st.success("Record reactivated.")
+        st.rerun()
+
+
+def render_record_fields(conn, fields: list[dict], values: dict, key_prefix: str) -> dict:
+    data = {}
+    for spec in fields:
+        name = spec["name"]
+        label = spec["label"]
+        kind = spec["kind"]
+        current = values.get(name, spec.get("default", ""))
+        key = f"{key_prefix}_{name}"
+        if kind == "textarea":
+            data[name] = st.text_area(label, value=str(current or ""), key=key)
+        elif kind == "int":
+            data[name] = int(
+                st.number_input(
+                    label,
+                    min_value=int(spec.get("min", 0)),
+                    value=int(current or spec.get("min", 0)),
+                    key=key,
+                )
+            )
+        elif kind == "float":
+            data[name] = float(
+                st.number_input(
+                    label,
+                    min_value=float(spec.get("min", 0.0)),
+                    max_value=float(spec.get("max", 100.0)),
+                    value=float(current or spec.get("min", 0.0)),
+                    step=float(spec.get("step", 0.1)),
+                    key=key,
+                )
+            )
+        elif kind == "bool":
+            data[name] = int(st.checkbox(label, value=bool(current), key=key))
+        elif kind == "choice":
+            choices = list(spec["choices"])
+            selected = str(current or choices[0])
+            index = choices.index(selected) if selected in choices else 0
+            data[name] = st.selectbox(label, choices, index=index, key=key)
+        elif kind == "fk":
+            data[name] = foreign_key_input(conn, spec, current, key)
+        else:
+            data[name] = st.text_input(label, value=str(current or ""), key=key)
+    return data
+
+
+def foreign_key_input(conn, spec: dict, current, key: str) -> int | None:
+    options = id_options(conn, spec["table"], spec["id_col"], spec["label_col"])
+    choices: list[int | None] = [None] + list(options.keys())
+    if current and int(current) not in choices:
+        choices.append(int(current))
+
+    def format_choice(value: int | None) -> str:
+        if value is None:
+            return "None"
+        return options.get(value, f"Missing record {value}")
+
+    current_value = int(current) if current else None
+    index = choices.index(current_value) if current_value in choices else 0
+    return st.selectbox(spec["label"], choices, index=index, format_func=format_choice, key=key)
+
+
+def record_label(row, id_col: str, label_cols: list[str]) -> str:
+    parts = [str(row[col]) for col in label_cols if col in row.keys() and row[col]]
+    status_parts = []
+    if "is_archived" in row.keys() and row["is_archived"]:
+        status_parts.append("archived")
+    if "is_active" in row.keys() and not row["is_active"]:
+        status_parts.append("inactive")
+    status = f" ({', '.join(status_parts)})" if status_parts else ""
+    label = " - ".join(parts) if parts else f"Record {row[id_col]}"
+    return f"{row[id_col]} - {label}{status}"
 
 
 def show_records(conn, table: str) -> None:

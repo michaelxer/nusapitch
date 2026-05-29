@@ -63,7 +63,28 @@ def update_record(conn: sqlite3.Connection, table: str, record_id: int, data: di
 
 def archive_record(conn: sqlite3.Connection, table: str, record_id: int) -> None:
     id_column = _id_column(table)
+    if "is_archived" not in _table_columns(conn, table):
+        raise ValueError(f"Table does not support archiving: {table}")
     conn.execute(f"UPDATE {table} SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE {id_column} = ?", (record_id,))
+    conn.commit()
+
+
+def restore_record(conn: sqlite3.Connection, table: str, record_id: int) -> None:
+    id_column = _id_column(table)
+    if "is_archived" not in _table_columns(conn, table):
+        raise ValueError(f"Table does not support restoring: {table}")
+    conn.execute(f"UPDATE {table} SET is_archived = 0, updated_at = CURRENT_TIMESTAMP WHERE {id_column} = ?", (record_id,))
+    conn.commit()
+
+
+def set_record_active(conn: sqlite3.Connection, table: str, record_id: int, is_active: bool) -> None:
+    id_column = _id_column(table)
+    if "is_active" not in _table_columns(conn, table):
+        raise ValueError(f"Table does not support active status: {table}")
+    conn.execute(
+        f"UPDATE {table} SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE {id_column} = ?",
+        (int(is_active), record_id),
+    )
     conn.commit()
 
 
@@ -73,7 +94,7 @@ def duplicate_record(conn: sqlite3.Connection, table: str, record_id: int, suffi
         raise ValueError("Record not found")
     id_column = _id_column(table)
     data = {key: row[key] for key in row.keys() if key not in {id_column, "created_at", "updated_at"}}
-    for name_field in ("business_name", "sender_name", "name", "campaign_name"):
+    for name_field in ("business_name", "sender_name", "name", "campaign_name", "account_name", "provider_name"):
         if name_field in data and data[name_field]:
             data[name_field] = f"{data[name_field]}{suffix}"
             break

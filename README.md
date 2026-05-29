@@ -36,7 +36,7 @@ Upload leads
 ## Features Implemented
 
 - Local Streamlit app shell
-- SQLite schema bootstrap for core outreach tables
+- SQLite schema migrations for core outreach tables
 - Runtime folder creation for local data and private files
 - CSV/XLSX lead import
 - Flexible column mapping
@@ -47,6 +47,7 @@ Upload leads
 - AI-draft pipeline hook for OpenAI-compatible chat completion APIs
 - Safe template fallback when no LLM is configured
 - Manual draft review page
+- Edit, duplicate, archive/restore, and active/inactive controls for setup records
 - Queue approval flow
 - Daily send ledger
 - Sender/domain/campaign limit calculation
@@ -56,8 +57,6 @@ Upload leads
 
 ## Planned V1 Work
 
-- Database migrations
-- Full edit/update/archive controls in the UI
 - Stronger LLM JSON validation and retry handling
 - SMTP sending behind safety gates
 - IMAP Sent save
