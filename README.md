@@ -55,6 +55,7 @@ Upload leads
 - Dry-run send recording
 - Confirmed SMTP send flow with sent history and ledger persistence
 - Optional IMAP Sent-folder save result tracking
+- SQLite backup and CSV export actions
 - Privacy scanner for public files
 - Initial pytest coverage
 
@@ -62,7 +63,6 @@ Upload leads
 
 - Reply and bounce checking
 - Suppression list UI
-- Backup and export actions
 - Broader tests for crash recovery, duplicate-send prevention, and profile switching
 
 ## Tech Stack
@@ -87,6 +87,7 @@ src/nusapitch/
   db.py                     # SQLite schema and helpers
   email_client.py           # SMTP/IMAP connection helpers
   imports.py                # CSV/XLSX import, cleaning, dedupe
+  backups.py                # SQLite backups and CSV exports
   paths.py                  # Runtime folder paths
   privacy.py                # Public file privacy scan
   profiles.py               # Profile CRUD helpers

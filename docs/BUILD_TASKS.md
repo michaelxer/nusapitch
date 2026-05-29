@@ -9,7 +9,7 @@
 
 ## V1 Core
 
-- [ ] Bootstrap local folders on app startup.
+- [x] Bootstrap local folders on app startup.
 - [x] Create SQLite schema and migration bootstrap.
 - [x] Add settings persistence.
 - [x] Add business profile CRUD.
@@ -17,15 +17,15 @@
 - [x] Add sender profile CRUD.
 - [ ] Add LLM settings and test connection.
 - [ ] Add SMTP/IMAP settings and test tools.
-- [ ] Add CSV/XLSX import with column mapping.
-- [ ] Add lead cleaning and deduplication.
-- [ ] Add recipient website research cache.
+- [x] Add CSV/XLSX import with column mapping.
+- [x] Add lead cleaning and deduplication.
+- [x] Add recipient website research cache.
 - [x] Add AI matching and draft generation.
 - [x] Add manual review screen.
-- [ ] Add persistent send queue.
-- [ ] Add daily send ledger and limit checks.
+- [x] Add persistent send queue.
+- [x] Add daily send ledger and limit checks.
 - [x] Add SMTP sending in dry-run-safe flow.
 - [x] Add IMAP Sent save.
 - [ ] Add reply/bounce checking.
-- [ ] Add exports and backups.
-- [ ] Add privacy audit command.
+- [x] Add exports and backups.
+- [x] Add privacy audit command.

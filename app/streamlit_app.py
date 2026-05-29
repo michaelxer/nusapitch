@@ -11,7 +11,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from nusapitch import ai, db, imports, privacy, profiles, research  # noqa: E402
+from nusapitch import ai, backups, db, imports, privacy, profiles, research  # noqa: E402
 from nusapitch import queue as send_queue  # noqa: E402
 from nusapitch.paths import DATA_DIR, default_db_path, ensure_runtime_dirs  # noqa: E402
 
@@ -470,6 +470,17 @@ def diagnostics_page(conn) -> None:
             st.json(findings)
         else:
             st.success("No private keywords found in public files.")
+    st.subheader("Backups and Exports")
+    col_a, col_b, col_c = st.columns(3)
+    if col_a.button("Create SQLite backup"):
+        backup_path = backups.create_sqlite_backup(DB_PATH)
+        st.success(f"Backup created: {backup_path}")
+    if col_b.button("Export leads CSV"):
+        export_path = backups.export_table_csv(conn, "leads")
+        st.success(f"Export created: {export_path}")
+    if col_c.button("Export all CSV"):
+        exported = backups.export_all_csv(conn)
+        st.success(f"Created {len(exported)} CSV exports.")
     st.subheader("Recent Audit Log")
     show_query(conn, "SELECT event_type, entity_type, entity_id, message, created_at FROM audit_log ORDER BY audit_log_id DESC LIMIT 50")
 
