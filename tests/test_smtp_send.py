@@ -8,9 +8,58 @@ def _seed_queued_email(conn):
     conn.execute(
         """
         INSERT INTO email_accounts (
-            account_name, sender_email, password_env_name, smtp_host, smtp_port, smtp_security, is_active
+            account_name, sender_email, password_env_name, smtp_host, smtp_port, smtp_security,
+            imap_host, imap_port, imap_security, sent_folder_name, inbox_folder_name, is_active
         )
-        VALUES ('Demo SMTP', 'sender@example.test', 'NUSAPITCH_TEST_EMAIL_SECRET', 'smtp.example.test', 465, 'SSL', 1)
+        VALUES (
+            'Demo SMTP', 'sender@example.test', 'NUSAPITCH_TEST_EMAIL_SECRET',
+            'smtp.example.test', 465, 'SSL', 'imap.example.test', 993, 'SSL',
+            'Sent', 'INBOX', 1
+        )
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO business_profiles (
+            business_name, brand_name, website, company_description, country,
+            target_market, value_proposition, credibility_points
+        )
+        VALUES (
+            'Demo Business', 'Demo Brand', 'https://demo.example',
+            'Demo supplier.', 'Indonesia', 'B2B buyers',
+            'Useful demo value.', 'Demo proof.'
+        )
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO sender_profiles (
+            sender_name, sender_position, sender_email, signature, opt_out_line
+        )
+        VALUES (
+            'Demo Sender', 'Sales', 'sender@example.test', 'Demo Sender',
+            'Reply no and I will not follow up.'
+        )
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO product_service_profiles (
+            business_profile_id, name, description, ideal_customer, use_cases, proof_points
+        )
+        VALUES (
+            1, 'Demo Product', 'Demo product description.',
+            'Procurement teams', 'sourcing', 'Demo proof.'
+        )
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO campaigns (
+            business_profile_id, sender_profile_id, product_service_profile_id,
+            campaign_name, sender_email_daily_limit, sender_domain_daily_limit, campaign_daily_limit
+        )
+        VALUES (1, 1, 1, 'Demo Campaign', 20, 30, 10)
         """
     )
     conn.execute(
@@ -21,16 +70,16 @@ def _seed_queued_email(conn):
     )
     conn.execute(
         """
-        INSERT INTO ai_email_drafts (lead_id, subject, email_body, status)
-        VALUES (1, 'Hello', 'Body', 'approved')
+        INSERT INTO ai_email_drafts (lead_id, campaign_id, subject, email_body, status)
+        VALUES (1, 1, 'Hello', 'Body', 'approved')
         """
     )
     conn.execute(
         """
         INSERT INTO send_queue (
-            ai_email_draft_id, lead_id, sender_email, recipient_email, subject, body, status
+            ai_email_draft_id, lead_id, campaign_id, sender_email, recipient_email, subject, body, status
         )
-        VALUES (1, 1, 'sender@example.test', 'buyer@example.test', 'Hello', 'Body', 'queued')
+        VALUES (1, 1, 1, 'sender@example.test', 'buyer@example.test', 'Hello', 'Body', 'queued')
         """
     )
     conn.commit()

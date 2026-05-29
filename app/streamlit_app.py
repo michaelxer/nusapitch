@@ -11,7 +11,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from nusapitch import ai, backups, db, email_client, imports, privacy, profiles, replies, research, suppression  # noqa: E402
+from nusapitch import ai, backups, db, email_client, imports, privacy, profiles, replies, research, setup_validation, suppression  # noqa: E402
 from nusapitch import queue as send_queue  # noqa: E402
 from nusapitch.paths import DATA_DIR, default_db_path, ensure_runtime_dirs, load_local_env  # noqa: E402
 
@@ -203,84 +203,84 @@ def profile_page(conn) -> None:
     tabs = st.tabs(["Business", "Product/Service", "Sender", "Campaign"])
     with tabs[0]:
         st.subheader("Business Profiles")
+        st.caption("Fields marked * are required before this setup can be saved or used for sending.")
         with st.form("business_form"):
             data = {
-                "business_name": st.text_input("Business name"),
-                "brand_name": st.text_input("Brand name"),
-                "website": st.text_input("Website"),
-                "company_description": st.text_area("Company description"),
-                "country": st.text_input("Country"),
+                "business_name": st.text_input(field_label("business_profiles", "business_name", "Business name")),
+                "brand_name": st.text_input(field_label("business_profiles", "brand_name", "Brand name")),
+                "website": st.text_input(field_label("business_profiles", "website", "Website")),
+                "company_description": st.text_area(field_label("business_profiles", "company_description", "Company description")),
+                "country": st.text_input(field_label("business_profiles", "country", "Country")),
                 "city_region": st.text_input("City/region"),
                 "business_address": st.text_input("Business address"),
                 "company_phone": st.text_input("Company phone"),
                 "company_email": st.text_input("Company email"),
                 "company_linkedin": st.text_input("Company LinkedIn"),
                 "business_type": st.text_input("Business type"),
-                "target_market": st.text_input("Target market"),
-                "value_proposition": st.text_area("Value proposition"),
-                "credibility_points": st.text_area("Credibility points"),
+                "target_market": st.text_input(field_label("business_profiles", "target_market", "Target market")),
+                "value_proposition": st.text_area(field_label("business_profiles", "value_proposition", "Value proposition")),
+                "credibility_points": st.text_area(field_label("business_profiles", "credibility_points", "Credibility points")),
                 "private_notes": st.text_area("Private notes"),
             }
             if st.form_submit_button("Save business profile"):
-                profiles.create_record(conn, "business_profiles", data)
-                st.success("Business profile saved.")
+                create_record_or_show_errors(conn, "business_profiles", data, "Business profile saved.")
         manage_records(conn, "business_profiles", "business_profile_id", ["business_name", "website"], FIELD_SPECS["business_profiles"])
 
     with tabs[1]:
         st.subheader("Product/Service Profiles")
+        st.caption("Fields marked * are required before this setup can be saved or used for sending.")
         business_options = id_options(conn, "business_profiles", "business_profile_id", "business_name")
         with st.form("product_form"):
             data = {
-                "business_profile_id": st.selectbox("Business profile", options=list(business_options.keys()), format_func=business_options.get) if business_options else None,
-                "name": st.text_input("Name"),
+                "business_profile_id": st.selectbox(field_label("product_service_profiles", "business_profile_id", "Business profile"), options=list(business_options.keys()), format_func=business_options.get) if business_options else None,
+                "name": st.text_input(field_label("product_service_profiles", "name", "Name")),
                 "category": st.text_input("Category"),
-                "description": st.text_area("Description"),
-                "ideal_customer": st.text_area("Ideal customer"),
-                "use_cases": st.text_area("Use cases"),
-                "proof_points": st.text_area("Proof points"),
+                "description": st.text_area(field_label("product_service_profiles", "description", "Description")),
+                "ideal_customer": st.text_area(field_label("product_service_profiles", "ideal_customer", "Ideal customer")),
+                "use_cases": st.text_area(field_label("product_service_profiles", "use_cases", "Use cases")),
+                "proof_points": st.text_area(field_label("product_service_profiles", "proof_points", "Proof points")),
                 "constraints": st.text_area("Constraints"),
             }
             if st.form_submit_button("Save product/service"):
-                profiles.create_record(conn, "product_service_profiles", data)
-                st.success("Product/service profile saved.")
+                create_record_or_show_errors(conn, "product_service_profiles", data, "Product/service profile saved.")
         manage_records(conn, "product_service_profiles", "product_service_profile_id", ["name", "category"], FIELD_SPECS["product_service_profiles"])
 
     with tabs[2]:
         st.subheader("Sender Profiles")
+        st.caption("Fields marked * are required before this setup can be saved or used for sending.")
         with st.form("sender_form"):
             data = {
-                "sender_name": st.text_input("Sender name"),
-                "sender_position": st.text_input("Sender position"),
-                "sender_email": st.text_input("Sender email"),
+                "sender_name": st.text_input(field_label("sender_profiles", "sender_name", "Sender name")),
+                "sender_position": st.text_input(field_label("sender_profiles", "sender_position", "Sender position")),
+                "sender_email": st.text_input(field_label("sender_profiles", "sender_email", "Sender email")),
                 "sender_phone": st.text_input("Sender phone"),
                 "sender_linkedin": st.text_input("Sender LinkedIn"),
-                "signature": st.text_area("Signature"),
-                "opt_out_line": st.text_input("Opt-out line", value='If this is not relevant, reply "no" and I will not follow up.'),
+                "signature": st.text_area(field_label("sender_profiles", "signature", "Signature")),
+                "opt_out_line": st.text_input(field_label("sender_profiles", "opt_out_line", "Opt-out line"), value='If this is not relevant, reply "no" and I will not follow up.'),
             }
             if st.form_submit_button("Save sender profile"):
-                profiles.create_record(conn, "sender_profiles", data)
-                st.success("Sender profile saved.")
+                create_record_or_show_errors(conn, "sender_profiles", data, "Sender profile saved.")
         manage_records(conn, "sender_profiles", "sender_profile_id", ["sender_name", "sender_email"], FIELD_SPECS["sender_profiles"])
 
     with tabs[3]:
         st.subheader("Campaigns")
+        st.caption("Fields marked * are required before this setup can be saved or used for sending.")
         business_options = id_options(conn, "business_profiles", "business_profile_id", "business_name")
         sender_options = id_options(conn, "sender_profiles", "sender_profile_id", "sender_email")
         product_options = id_options(conn, "product_service_profiles", "product_service_profile_id", "name")
         with st.form("campaign_form"):
             data = {
-                "campaign_name": st.text_input("Campaign name"),
-                "business_profile_id": select_or_none("Business profile", business_options),
-                "sender_profile_id": select_or_none("Sender profile", sender_options),
-                "product_service_profile_id": select_or_none("Product/service", product_options),
-                "sender_email_daily_limit": st.number_input("Sender email daily limit", min_value=1, value=20),
-                "sender_domain_daily_limit": st.number_input("Sender domain daily limit", min_value=1, value=30),
-                "campaign_daily_limit": st.number_input("Campaign daily limit", min_value=1, value=10),
+                "campaign_name": st.text_input(field_label("campaigns", "campaign_name", "Campaign name")),
+                "business_profile_id": select_or_none(field_label("campaigns", "business_profile_id", "Business profile"), business_options),
+                "sender_profile_id": select_or_none(field_label("campaigns", "sender_profile_id", "Sender profile"), sender_options),
+                "product_service_profile_id": select_or_none(field_label("campaigns", "product_service_profile_id", "Product/service"), product_options),
+                "sender_email_daily_limit": st.number_input(field_label("campaigns", "sender_email_daily_limit", "Sender email daily limit"), min_value=1, value=20),
+                "sender_domain_daily_limit": st.number_input(field_label("campaigns", "sender_domain_daily_limit", "Sender domain daily limit"), min_value=1, value=30),
+                "campaign_daily_limit": st.number_input(field_label("campaigns", "campaign_daily_limit", "Campaign daily limit"), min_value=1, value=10),
                 "mode": st.selectbox("Mode", ["review", "draft-only", "auto-send"]),
             }
             if st.form_submit_button("Save campaign"):
-                profiles.create_record(conn, "campaigns", data)
-                st.success("Campaign saved.")
+                create_record_or_show_errors(conn, "campaigns", data, "Campaign saved.")
         manage_records(conn, "campaigns", "campaign_id", ["campaign_name", "mode"], FIELD_SPECS["campaigns"])
 
 
@@ -288,21 +288,21 @@ def settings_page(conn) -> None:
     tabs = st.tabs(["LLM", "Email"])
     with tabs[0]:
         st.subheader("OpenAI-Compatible LLM")
+        st.caption("Fields marked * are required before these settings can be saved.")
         st.info("Store the real LLM secret in an environment variable or `.credentials/llm.env`, not in this database form.")
         with st.form("llm_form"):
             data = {
-                "provider_name": st.text_input("Provider name", value="OpenAI-compatible"),
-                "base_url": st.text_input("Base URL", value="https://api.example.com/v1"),
-                "secret_env_name": st.text_input("LLM secret env var", value="NUSAPITCH_LLM_SECRET"),
-                "model_name": st.text_input("Model name"),
+                "provider_name": st.text_input(field_label("llm_settings", "provider_name", "Provider name"), value="OpenAI-compatible"),
+                "base_url": st.text_input(field_label("llm_settings", "base_url", "Base URL"), value="https://api.example.com/v1"),
+                "secret_env_name": st.text_input(field_label("llm_settings", "secret_env_name", "LLM secret env var"), value="NUSAPITCH_LLM_SECRET"),
+                "model_name": st.text_input(field_label("llm_settings", "model_name", "Model name")),
                 "temperature": st.slider("Temperature", 0.0, 1.0, 0.3, 0.1),
                 "max_tokens": st.number_input("Max tokens", min_value=100, value=1200),
                 "timeout_seconds": st.number_input("Timeout seconds", min_value=5, value=60),
                 "retry_count": st.number_input("Retry count", min_value=0, value=1),
             }
             if st.form_submit_button("Save LLM settings"):
-                profiles.create_record(conn, "llm_settings", data)
-                st.success("LLM settings saved.")
+                create_record_or_show_errors(conn, "llm_settings", data, "LLM settings saved.")
         if st.button("Test LLM connection"):
             ok, message = ai.test_llm_connection(conn)
             st.success(message) if ok else st.error(message)
@@ -310,27 +310,27 @@ def settings_page(conn) -> None:
 
     with tabs[1]:
         st.subheader("SMTP/IMAP Email Account")
+        st.caption("Fields marked * are required before these settings can be saved or used for sending.")
         st.info("Store the real email password in an environment variable or `.credentials/email.env`, not in this database form.")
         with st.form("email_form"):
             data = {
-                "account_name": st.text_input("Account name"),
-                "sender_email": st.text_input("Sender email"),
-                "password_env_name": st.text_input("Email secret env var", value="NUSAPITCH_EMAIL_SECRET"),
-                "smtp_host": st.text_input("SMTP host"),
-                "smtp_port": st.number_input("SMTP port", min_value=1, value=465),
-                "smtp_security": st.selectbox("SMTP security", ["SSL", "STARTTLS", "NONE"]),
-                "imap_host": st.text_input("IMAP host"),
-                "imap_port": st.number_input("IMAP port", min_value=1, value=993),
-                "imap_security": st.selectbox("IMAP security", ["SSL"]),
-                "sent_folder_name": st.text_input("Sent folder", value="Sent"),
-                "inbox_folder_name": st.text_input("Inbox folder", value="INBOX"),
+                "account_name": st.text_input(field_label("email_accounts", "account_name", "Account name")),
+                "sender_email": st.text_input(field_label("email_accounts", "sender_email", "Sender email")),
+                "password_env_name": st.text_input(field_label("email_accounts", "password_env_name", "Email secret env var"), value="NUSAPITCH_EMAIL_SECRET"),
+                "smtp_host": st.text_input(field_label("email_accounts", "smtp_host", "SMTP host")),
+                "smtp_port": st.number_input(field_label("email_accounts", "smtp_port", "SMTP port"), min_value=1, value=465),
+                "smtp_security": st.selectbox(field_label("email_accounts", "smtp_security", "SMTP security"), ["SSL", "STARTTLS", "NONE"]),
+                "imap_host": st.text_input(field_label("email_accounts", "imap_host", "IMAP host")),
+                "imap_port": st.number_input(field_label("email_accounts", "imap_port", "IMAP port"), min_value=1, value=993),
+                "imap_security": st.selectbox(field_label("email_accounts", "imap_security", "IMAP security"), ["SSL"]),
+                "sent_folder_name": st.text_input(field_label("email_accounts", "sent_folder_name", "Sent folder"), value="Sent"),
+                "inbox_folder_name": st.text_input(field_label("email_accounts", "inbox_folder_name", "Inbox folder"), value="INBOX"),
                 "enable_save_to_sent": int(st.checkbox("Save to IMAP Sent", value=True)),
                 "enable_bcc_self_backup": int(st.checkbox("BCC self backup", value=False)),
                 "bcc_backup_email": st.text_input("BCC backup email"),
             }
             if st.form_submit_button("Save email account"):
-                profiles.create_record(conn, "email_accounts", data)
-                st.success("Email account saved.")
+                create_record_or_show_errors(conn, "email_accounts", data, "Email account saved.")
         active_account = conn.execute(
             "SELECT * FROM email_accounts WHERE is_active = 1 ORDER BY email_account_id DESC LIMIT 1"
         ).fetchone()
@@ -443,8 +443,11 @@ def review_queue_page(conn) -> None:
         st.text_area("Email body", value=draft["email_body"], height=260, disabled=True)
         sender_email = st.text_input("Sender email for queue")
         if st.button("Approve and add to queue"):
-            queue_id = send_queue.approve_draft_to_queue(conn, draft_id, sender_email)
-            st.success(f"Queued email: {queue_id}")
+            try:
+                queue_id = send_queue.approve_draft_to_queue(conn, draft_id, sender_email)
+                st.success(f"Queued email: {queue_id}")
+            except ValueError as exc:
+                st.error(str(exc))
     else:
         st.info("No draft emails waiting for review.")
 
@@ -591,7 +594,7 @@ def manage_records(conn, table: str, id_col: str, label_cols: list[str], fields:
 
     values = dict(record)
     with st.form(f"manage_form_{table}_{record_id}"):
-        data = render_record_fields(conn, fields, values, f"manage_{table}_{record_id}")
+        data = render_record_fields(conn, table, fields, values, f"manage_{table}_{record_id}")
         button_cols = st.columns(5)
         with button_cols[0]:
             update_clicked = st.form_submit_button("Update")
@@ -615,9 +618,13 @@ def manage_records(conn, table: str, id_col: str, label_cols: list[str], fields:
                     reactivate_clicked = st.form_submit_button("Reactivate")
 
     if update_clicked:
-        profiles.update_record(conn, table, record_id, data)
-        st.success("Record updated.")
-        st.rerun()
+        problems = setup_validation.validate_record_data(table, data)
+        if problems:
+            show_validation_errors(problems)
+        else:
+            profiles.update_record(conn, table, record_id, data)
+            st.success("Record updated.")
+            st.rerun()
     if duplicate_clicked:
         new_id = profiles.duplicate_record(conn, table, record_id)
         st.success(f"Record duplicated: {new_id}.")
@@ -640,11 +647,11 @@ def manage_records(conn, table: str, id_col: str, label_cols: list[str], fields:
         st.rerun()
 
 
-def render_record_fields(conn, fields: list[dict], values: dict, key_prefix: str) -> dict:
+def render_record_fields(conn, table: str, fields: list[dict], values: dict, key_prefix: str) -> dict:
     data = {}
     for spec in fields:
         name = spec["name"]
-        label = spec["label"]
+        label = field_label(table, name, spec["label"])
         kind = spec["kind"]
         current = values.get(name, spec.get("default", ""))
         key = f"{key_prefix}_{name}"
@@ -710,6 +717,26 @@ def record_label(row, id_col: str, label_cols: list[str]) -> str:
     status = f" ({', '.join(status_parts)})" if status_parts else ""
     label = " - ".join(parts) if parts else f"Record {row[id_col]}"
     return f"{row[id_col]} - {label}{status}"
+
+
+def field_label(table: str, field: str, label: str) -> str:
+    return setup_validation.required_label(table, field, label)
+
+
+def create_record_or_show_errors(conn, table: str, data: dict, success_message: str) -> int | None:
+    problems = setup_validation.validate_record_data(table, data)
+    if problems:
+        show_validation_errors(problems)
+        return None
+    record_id = profiles.create_record(conn, table, data)
+    st.success(success_message)
+    return record_id
+
+
+def show_validation_errors(problems: list[str]) -> None:
+    st.error("Please complete the required setup before saving:")
+    for problem in problems:
+        st.warning(problem)
 
 
 def show_records(conn, table: str) -> None:

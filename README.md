@@ -50,6 +50,7 @@ Upload leads
 - LLM and SMTP/IMAP configuration checks
 - Manual draft review page
 - Edit, duplicate, archive/restore, and active/inactive controls for setup records
+- Required setup-field validation with clear missing-field guidance
 - Queue approval flow
 - Daily send ledger
 - Sender/domain/campaign limit calculation
@@ -138,6 +139,8 @@ copy .env.example .credentials\email.env
 ```
 
 Real API keys, email passwords, uploaded lead files, local databases, exports, logs, and private business profiles are ignored by git.
+
+Fields marked with `*` in the app are required before a profile, product/service, sender, campaign, LLM setting, or email account can be saved. If an older/imported record is incomplete, safety checks and send attempts report the exact screen and field to complete before sending.
 
 ## Privacy Model
 

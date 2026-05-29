@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone as dt_timezone
 from zoneinfo import ZoneInfo
 
-from . import db, email_client
+from . import db, email_client, setup_validation
 from .imports import normalize_domain, normalize_email
 
 
@@ -37,6 +37,9 @@ def approve_draft_to_queue(conn: sqlite3.Connection, draft_id: int, sender_email
         raise ValueError("Lead not found")
     if not lead["normalized_email"]:
         raise ValueError("Lead has no valid recipient email")
+    sender = normalize_email(sender_email)
+    if not sender:
+        raise ValueError("Review Queue > Sender email for queue is required before approving.")
     cur = conn.execute(
         """
         INSERT INTO send_queue (
@@ -49,7 +52,7 @@ def approve_draft_to_queue(conn: sqlite3.Connection, draft_id: int, sender_email
             draft_id,
             draft["lead_id"],
             draft["campaign_id"],
-            sender_email,
+            sender,
             lead["normalized_email"],
             draft["subject"],
             draft["email_body"],
@@ -115,6 +118,7 @@ def safety_check_queue_item(conn: sqlite3.Connection, send_queue_id: int, timezo
         problems.append("Queue item is not queued")
     if not recipient:
         problems.append("Missing recipient email")
+    problems.extend(setup_validation.validate_setup_for_queue_item(conn, item))
     if _is_suppressed(conn, recipient, domain):
         problems.append("Recipient or domain is suppressed")
     if _already_sent(conn, recipient, domain):
