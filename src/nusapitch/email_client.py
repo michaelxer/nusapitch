@@ -5,10 +5,23 @@ import os
 import smtplib
 import sqlite3
 import time
+from dataclasses import dataclass
+from email import policy
 from email.message import EmailMessage
-from email.utils import formatdate, getaddresses, make_msgid
+from email.parser import BytesParser
+from email.utils import formatdate, getaddresses, make_msgid, parseaddr
 
 from .imports import normalize_domain
+
+
+@dataclass
+class InboxMessage:
+    sender_email: str
+    subject: str
+    message_id: str
+    in_reply_to: str
+    body_preview: str
+    received_at: str
 
 
 def test_smtp(account: sqlite3.Row) -> tuple[bool, str]:
@@ -107,3 +120,53 @@ def save_to_sent(account: sqlite3.Row, message: EmailMessage) -> str:
     if status != "OK":
         raise ValueError(f"IMAP append returned {status}")
     return "Saved to IMAP Sent"
+
+
+def fetch_recent_messages(account: sqlite3.Row, limit: int = 50) -> list[InboxMessage]:
+    password = os.getenv(account["password_env_name"], "")
+    if not password:
+        raise ValueError(f"Missing password environment variable: {account['password_env_name']}")
+    if account["imap_security"].upper() != "SSL":
+        raise ValueError("Only IMAP SSL is supported in v1.")
+
+    with imaplib.IMAP4_SSL(account["imap_host"], int(account["imap_port"])) as client:
+        client.login(account["sender_email"], password)
+        client.select(account["inbox_folder_name"])
+        status, data = client.search(None, "ALL")
+        if status != "OK" or not data:
+            return []
+        ids = data[0].split()[-limit:]
+        messages = []
+        for message_id in reversed(ids):
+            fetch_status, fetched = client.fetch(message_id, "(RFC822)")
+            if fetch_status != "OK" or not fetched:
+                continue
+            raw = next((part[1] for part in fetched if isinstance(part, tuple)), b"")
+            if raw:
+                messages.append(_parse_inbox_message(raw))
+    return messages
+
+
+def _parse_inbox_message(raw: bytes) -> InboxMessage:
+    parsed = BytesParser(policy=policy.default).parsebytes(raw)
+    _, sender_email = parseaddr(str(parsed.get("From", "")))
+    body = _message_text(parsed)
+    return InboxMessage(
+        sender_email=sender_email.lower(),
+        subject=str(parsed.get("Subject", "")),
+        message_id=str(parsed.get("Message-ID", "")),
+        in_reply_to=str(parsed.get("In-Reply-To", "")),
+        body_preview=body[:500],
+        received_at=str(parsed.get("Date", "")),
+    )
+
+
+def _message_text(message: EmailMessage) -> str:
+    if message.is_multipart():
+        for part in message.walk():
+            if part.get_content_type() == "text/plain":
+                return str(part.get_content()).strip()
+        return ""
+    if message.get_content_type() == "text/plain":
+        return str(message.get_content()).strip()
+    return ""

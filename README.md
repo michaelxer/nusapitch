@@ -58,12 +58,12 @@ Upload leads
 - Optional IMAP Sent-folder save result tracking
 - SQLite backup and CSV export actions
 - Manual suppression-list management
+- IMAP inbox sync for replies and obvious bounces
 - Privacy scanner for public files
 - Initial pytest coverage
 
 ## Planned V1 Work
 
-- Reply and bounce checking
 - Broader tests for crash recovery, duplicate-send prevention, and profile switching
 
 ## Tech Stack
@@ -93,6 +93,7 @@ src/nusapitch/
   privacy.py                # Public file privacy scan
   profiles.py               # Profile CRUD helpers
   queue.py                  # Queue safety and daily ledger logic
+  replies.py                # IMAP reply/bounce sync
   research.py               # Website research
   suppression.py            # Manual opt-out/bounce/domain blocks
 sample_leads/

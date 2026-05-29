@@ -27,6 +27,6 @@
 - [x] Add SMTP sending in dry-run-safe flow.
 - [x] Add IMAP Sent save.
 - [x] Add suppression list UI.
-- [ ] Add reply/bounce checking.
+- [x] Add reply/bounce checking.
 - [x] Add exports and backups.
 - [x] Add privacy audit command.

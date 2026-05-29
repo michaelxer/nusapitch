@@ -11,7 +11,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from nusapitch import ai, backups, db, email_client, imports, privacy, profiles, research, suppression  # noqa: E402
+from nusapitch import ai, backups, db, email_client, imports, privacy, profiles, replies, research, suppression  # noqa: E402
 from nusapitch import queue as send_queue  # noqa: E402
 from nusapitch.paths import DATA_DIR, default_db_path, ensure_runtime_dirs  # noqa: E402
 
@@ -531,6 +531,21 @@ def diagnostics_page(conn) -> None:
     if col_c.button("Export all CSV"):
         exported = backups.export_all_csv(conn)
         st.success(f"Created {len(exported)} CSV exports.")
+    st.subheader("Inbox Sync")
+    active_account = conn.execute(
+        "SELECT * FROM email_accounts WHERE is_active = 1 ORDER BY email_account_id DESC LIMIT 1"
+    ).fetchone()
+    if st.button("Check active inbox for replies/bounces"):
+        if active_account is None:
+            st.error("No active email account saved.")
+        else:
+            try:
+                counts = replies.sync_replies_and_bounces(conn, active_account)
+                st.success(
+                    f"Replies: {counts['reply']}, bounces: {counts['bounce']}, duplicates: {counts['duplicate']}."
+                )
+            except Exception as exc:  # noqa: BLE001
+                st.error(str(exc))
     st.subheader("Recent Audit Log")
     show_query(conn, "SELECT event_type, entity_type, entity_id, message, created_at FROM audit_log ORDER BY audit_log_id DESC LIMIT 50")
 
