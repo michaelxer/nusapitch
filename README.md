@@ -45,6 +45,7 @@ Upload leads
 - Placeholder/invalid email detection
 - Basic recipient website research with readable text extraction
 - AI-draft pipeline hook for OpenAI-compatible chat completion APIs
+- LLM draft JSON validation with retry and audited fallback handling
 - Safe template fallback when no LLM is configured
 - Manual draft review page
 - Edit, duplicate, archive/restore, and active/inactive controls for setup records
@@ -57,7 +58,6 @@ Upload leads
 
 ## Planned V1 Work
 
-- Stronger LLM JSON validation and retry handling
 - SMTP sending behind safety gates
 - IMAP Sent save
 - Reply and bounce checking

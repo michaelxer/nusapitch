@@ -20,7 +20,7 @@
 - [ ] Add CSV/XLSX import with column mapping.
 - [ ] Add lead cleaning and deduplication.
 - [ ] Add recipient website research cache.
-- [ ] Add AI matching and draft generation.
+- [x] Add AI matching and draft generation.
 - [x] Add manual review screen.
 - [ ] Add persistent send queue.
 - [ ] Add daily send ledger and limit checks.

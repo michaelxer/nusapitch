@@ -7,6 +7,27 @@ from typing import Any
 
 import requests
 
+from . import db
+
+
+REQUIRED_DRAFT_FIELDS = {
+    "relevance_score_0_100",
+    "recommended_product_or_service",
+    "buyer_type",
+    "email_angle",
+    "personalization_reason",
+    "risk_notes",
+    "send_recommendation",
+    "subject",
+    "email_body",
+}
+
+ALLOWED_SEND_RECOMMENDATIONS = {"send", "review", "skip"}
+
+
+class DraftValidationError(ValueError):
+    pass
+
 
 def generate_email_draft(
     conn: sqlite3.Connection,
@@ -77,7 +98,13 @@ def test_llm_connection(conn: sqlite3.Connection) -> tuple[bool, str]:
     return True, "LLM connection succeeded."
 
 
-def _generate_with_llm(conn: sqlite3.Connection, lead: sqlite3.Row, business: sqlite3.Row | None, product: sqlite3.Row | None, research: sqlite3.Row | None) -> dict[str, Any]:
+def _generate_with_llm(
+    conn: sqlite3.Connection,
+    lead: sqlite3.Row,
+    business: sqlite3.Row | None,
+    product: sqlite3.Row | None,
+    research: sqlite3.Row | None,
+) -> dict[str, Any]:
     settings = conn.execute("SELECT * FROM llm_settings WHERE is_active = 1 ORDER BY llm_settings_id DESC LIMIT 1").fetchone()
     if settings is None:
         return _template_draft(lead, business, product, research)
@@ -101,12 +128,35 @@ def _generate_with_llm(conn: sqlite3.Connection, lead: sqlite3.Row, business: sq
         {"role": "system", "content": "You write safe, factual B2B cold email drafts as JSON."},
         {"role": "user", "content": json.dumps(prompt)},
     ]
-    try:
-        response_text = _chat_completion(settings, secret, messages)
-        parsed = json.loads(response_text)
-        return _normalize_draft(parsed)
-    except Exception:
-        return _template_draft(lead, business, product, research)
+    max_attempts = max(1, int(settings["retry_count"]) + 1)
+    last_error = ""
+    for attempt in range(1, max_attempts + 1):
+        response_text = ""
+        try:
+            response_text = _chat_completion(settings, secret, messages)
+            parsed = _parse_json_object(response_text)
+            return _normalize_draft(parsed)
+        except (DraftValidationError, json.JSONDecodeError, KeyError, requests.RequestException, ValueError) as exc:
+            last_error = str(exc)
+            if attempt == max_attempts:
+                break
+            messages.append({"role": "assistant", "content": response_text[:2000] if response_text else ""})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        f"Your previous response was invalid: {last_error}. "
+                        "Return one JSON object only with all required fields and no markdown."
+                    ),
+                }
+            )
+
+    fallback = _template_draft(lead, business, product, research)
+    fallback["risk_notes"] = (
+        f"{fallback['risk_notes']} LLM fallback after {max_attempts} attempt(s): {last_error}"
+    ).strip()
+    db.audit(conn, "llm_fallback", fallback["risk_notes"], "lead", str(lead["lead_id"]))
+    return fallback
 
 
 def _chat_completion(settings: sqlite3.Row, secret: str, messages: list[dict[str, str]]) -> str:
@@ -126,7 +176,10 @@ def _chat_completion(settings: sqlite3.Row, secret: str, messages: list[dict[str
     )
     response.raise_for_status()
     data = response.json()
-    return str(data["choices"][0]["message"]["content"])
+    content = data["choices"][0]["message"]["content"]
+    if not isinstance(content, str) or not content.strip():
+        raise DraftValidationError("LLM response content was empty")
+    return content.strip()
 
 
 def _template_draft(lead: sqlite3.Row, business: sqlite3.Row | None, product: sqlite3.Row | None, research: sqlite3.Row | None) -> dict[str, Any]:
@@ -161,19 +214,51 @@ def _template_draft(lead: sqlite3.Row, business: sqlite3.Row | None, product: sq
 
 
 def _normalize_draft(parsed: dict[str, Any]) -> dict[str, Any]:
-    defaults = {
-        "relevance_score_0_100": 0,
-        "recommended_product_or_service": "",
-        "buyer_type": "",
-        "email_angle": "",
-        "personalization_reason": "",
-        "risk_notes": "",
-        "send_recommendation": "review",
-        "subject": "",
-        "email_body": "",
-    }
-    defaults.update({key: parsed.get(key, value) for key, value in defaults.items()})
-    return defaults
+    if not isinstance(parsed, dict):
+        raise DraftValidationError("LLM draft must be a JSON object")
+    missing = sorted(REQUIRED_DRAFT_FIELDS - set(parsed))
+    if missing:
+        raise DraftValidationError(f"Missing required draft fields: {', '.join(missing)}")
+
+    draft = {}
+    try:
+        score = int(float(parsed["relevance_score_0_100"]))
+    except (TypeError, ValueError) as exc:
+        raise DraftValidationError("relevance_score_0_100 must be numeric") from exc
+    draft["relevance_score_0_100"] = max(0, min(100, score))
+
+    for key in REQUIRED_DRAFT_FIELDS - {"relevance_score_0_100", "send_recommendation"}:
+        value = str(parsed.get(key, "")).strip()
+        if key in {"subject", "email_body"} and not value:
+            raise DraftValidationError(f"{key} cannot be empty")
+        draft[key] = value
+
+    recommendation = str(parsed["send_recommendation"]).strip().lower()
+    if recommendation not in ALLOWED_SEND_RECOMMENDATIONS:
+        raise DraftValidationError("send_recommendation must be send, review, or skip")
+    draft["send_recommendation"] = recommendation
+    draft["subject"] = draft["subject"][:180]
+    draft["email_body"] = draft["email_body"][:4000]
+    return draft
+
+
+def _parse_json_object(text: str) -> dict[str, Any]:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`").strip()
+        if cleaned.lower().startswith("json"):
+            cleaned = cleaned[4:].strip()
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise
+        parsed = json.loads(cleaned[start : end + 1])
+    if not isinstance(parsed, dict):
+        raise DraftValidationError("LLM draft must be a JSON object")
+    return parsed
 
 
 def _optional_row(conn: sqlite3.Connection, table: str, id_column: str, record_id: int | None) -> sqlite3.Row | None:
