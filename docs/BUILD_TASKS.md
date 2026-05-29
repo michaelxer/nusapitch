@@ -15,8 +15,8 @@
 - [x] Add business profile CRUD.
 - [x] Add product/service profile CRUD.
 - [x] Add sender profile CRUD.
-- [ ] Add LLM settings and test connection.
-- [ ] Add SMTP/IMAP settings and test tools.
+- [x] Add LLM settings and test connection.
+- [x] Add SMTP/IMAP settings and test tools.
 - [x] Add CSV/XLSX import with column mapping.
 - [x] Add lead cleaning and deduplication.
 - [x] Add recipient website research cache.

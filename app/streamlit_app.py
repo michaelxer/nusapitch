@@ -11,7 +11,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from nusapitch import ai, backups, db, imports, privacy, profiles, research  # noqa: E402
+from nusapitch import ai, backups, db, email_client, imports, privacy, profiles, research  # noqa: E402
 from nusapitch import queue as send_queue  # noqa: E402
 from nusapitch.paths import DATA_DIR, default_db_path, ensure_runtime_dirs  # noqa: E402
 
@@ -327,6 +327,22 @@ def settings_page(conn) -> None:
             if st.form_submit_button("Save email account"):
                 profiles.create_record(conn, "email_accounts", data)
                 st.success("Email account saved.")
+        active_account = conn.execute(
+            "SELECT * FROM email_accounts WHERE is_active = 1 ORDER BY email_account_id DESC LIMIT 1"
+        ).fetchone()
+        test_cols = st.columns(2)
+        if test_cols[0].button("Test active SMTP"):
+            if active_account is None:
+                st.error("No active email account saved.")
+            else:
+                ok, message = email_client.test_smtp(active_account)
+                st.success(message) if ok else st.error(message)
+        if test_cols[1].button("Test active IMAP"):
+            if active_account is None:
+                st.error("No active email account saved.")
+            else:
+                ok, message = email_client.test_imap(active_account)
+                st.success(message) if ok else st.error(message)
         manage_records(conn, "email_accounts", "email_account_id", ["account_name", "sender_email"], FIELD_SPECS["email_accounts"])
 
 

@@ -47,6 +47,7 @@ Upload leads
 - AI-draft pipeline hook for OpenAI-compatible chat completion APIs
 - LLM draft JSON validation with retry and audited fallback handling
 - Safe template fallback when no LLM is configured
+- LLM and SMTP/IMAP configuration checks
 - Manual draft review page
 - Edit, duplicate, archive/restore, and active/inactive controls for setup records
 - Queue approval flow
