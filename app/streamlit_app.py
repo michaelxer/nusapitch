@@ -11,7 +11,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from nusapitch import ai, backups, db, email_client, imports, privacy, profiles, research  # noqa: E402
+from nusapitch import ai, backups, db, email_client, imports, privacy, profiles, research, suppression  # noqa: E402
 from nusapitch import queue as send_queue  # noqa: E402
 from nusapitch.paths import DATA_DIR, default_db_path, ensure_runtime_dirs  # noqa: E402
 
@@ -143,6 +143,7 @@ def main() -> None:
             "Lead Import",
             "Research & Drafts",
             "Review Queue",
+            "Suppression",
             "Diagnostics",
         ],
     )
@@ -160,6 +161,8 @@ def main() -> None:
             research_drafts_page(conn)
         elif page == "Review Queue":
             review_queue_page(conn)
+        elif page == "Suppression":
+            suppression_page(conn)
         else:
             diagnostics_page(conn)
 
@@ -471,6 +474,37 @@ def review_queue_page(conn) -> None:
                 st.error("\n".join(messages))
     else:
         st.info("No queued emails.")
+
+
+def suppression_page(conn) -> None:
+    st.subheader("Suppression List")
+    with st.form("suppression_form"):
+        data = {
+            "email": st.text_input("Email"),
+            "domain": st.text_input("Domain"),
+            "reason": st.selectbox("Reason", ["opt-out", "bounce", "manual block", "duplicate", "other"]),
+            "source": st.text_input("Source", value="manual"),
+            "notes": st.text_area("Notes"),
+        }
+        if st.form_submit_button("Add suppression"):
+            try:
+                suppression_id = suppression.add_suppression(conn, **data)
+                st.success(f"Suppression added: {suppression_id}")
+            except ValueError as exc:
+                st.error(str(exc))
+
+    rows = suppression.list_suppressions(conn)
+    show_rows(rows)
+    if rows:
+        options = {
+            int(row["suppression_id"]): f"{row['suppression_id']} - {row['email'] or row['domain']} - {row['reason']}"
+            for row in rows
+        }
+        suppression_id = st.selectbox("Suppression record", list(options.keys()), format_func=options.get)
+        if st.button("Remove selected suppression"):
+            suppression.remove_suppression(conn, suppression_id)
+            st.success("Suppression removed.")
+            st.rerun()
 
 
 def diagnostics_page(conn) -> None:

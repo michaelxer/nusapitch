@@ -57,13 +57,13 @@ Upload leads
 - Confirmed SMTP send flow with sent history and ledger persistence
 - Optional IMAP Sent-folder save result tracking
 - SQLite backup and CSV export actions
+- Manual suppression-list management
 - Privacy scanner for public files
 - Initial pytest coverage
 
 ## Planned V1 Work
 
 - Reply and bounce checking
-- Suppression list UI
 - Broader tests for crash recovery, duplicate-send prevention, and profile switching
 
 ## Tech Stack
@@ -94,6 +94,7 @@ src/nusapitch/
   profiles.py               # Profile CRUD helpers
   queue.py                  # Queue safety and daily ledger logic
   research.py               # Website research
+  suppression.py            # Manual opt-out/bounce/domain blocks
 sample_leads/
   sample_leads.csv          # Fake demo leads
 sample_profiles/
