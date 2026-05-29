@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from zoneinfo import ZoneInfo
 
+from . import db, email_client
 from .imports import normalize_domain, normalize_email
 
 
@@ -130,7 +131,7 @@ def record_dry_run_send(conn: sqlite3.Connection, send_queue_id: int, timezone: 
     if item is None:
         raise ValueError("Queue item not found")
     now_local = datetime.now(ZoneInfo(timezone))
-    now_utc = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    now_utc = datetime.now(dt_timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     sender = normalize_email(item["sender_email"])
     sender_domain = normalize_domain(sender)
     conn.execute(
@@ -163,6 +164,52 @@ def record_dry_run_send(conn: sqlite3.Connection, send_queue_id: int, timezone: 
     conn.commit()
 
 
+def send_real_email(
+    conn: sqlite3.Connection,
+    send_queue_id: int,
+    confirm_real_send: bool = False,
+    timezone: str = DEFAULT_TZ,
+) -> tuple[bool, list[str]]:
+    if not confirm_real_send:
+        return False, ["Real SMTP sending requires explicit confirmation"]
+
+    ok, problems = safety_check_queue_item(conn, send_queue_id, timezone)
+    if not ok:
+        return False, problems
+
+    item = conn.execute("SELECT * FROM send_queue WHERE send_queue_id = ?", (send_queue_id,)).fetchone()
+    if item is None:
+        return False, ["Queue item not found"]
+
+    account = _active_email_account(conn, item["sender_email"])
+    if account is None:
+        return False, ["No active email account matches the queue sender"]
+
+    bcc = account["bcc_backup_email"] if account["enable_bcc_self_backup"] else ""
+    message = email_client.build_message(
+        item["sender_email"],
+        item["recipient_email"],
+        item["subject"],
+        item["body"],
+        bcc=bcc,
+    )
+
+    try:
+        smtp_message_id, smtp_result = email_client.send_smtp(account, message)
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+        conn.execute(
+            "UPDATE send_queue SET status = 'send_failed', error_message = ?, updated_at = CURRENT_TIMESTAMP WHERE send_queue_id = ?",
+            (error, send_queue_id),
+        )
+        db.audit(conn, "smtp_send_failed", error, "send_queue", str(send_queue_id))
+        conn.commit()
+        return False, [error]
+
+    _record_successful_send(conn, item, smtp_message_id, smtp_result, timezone)
+    return True, [smtp_result]
+
+
 def _count_ledger(conn: sqlite3.Connection, condition: str, params: tuple[object, ...]) -> int:
     row = conn.execute(
         f"SELECT COUNT(*) AS count FROM daily_send_ledger WHERE date_local = ? AND status IN ('sent', 'dry_run') AND {condition}",
@@ -189,3 +236,82 @@ def _already_sent(conn: sqlite3.Connection, email: str, domain: str) -> bool:
         (email, f"%@{domain}"),
     ).fetchone()
     return row is not None
+
+
+def _active_email_account(conn: sqlite3.Connection, sender_email: str) -> sqlite3.Row | None:
+    sender = normalize_email(sender_email)
+    return conn.execute(
+        """
+        SELECT * FROM email_accounts
+        WHERE is_active = 1 AND lower(sender_email) = ?
+        ORDER BY email_account_id DESC
+        LIMIT 1
+        """,
+        (sender,),
+    ).fetchone()
+
+
+def _record_successful_send(
+    conn: sqlite3.Connection,
+    item: sqlite3.Row,
+    smtp_message_id: str,
+    smtp_result: str,
+    timezone: str,
+) -> None:
+    now_local = datetime.now(ZoneInfo(timezone))
+    now_utc = datetime.now(dt_timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    sender = normalize_email(item["sender_email"])
+    sender_domain = normalize_domain(sender)
+    app_message_id = f"nusapitch-smtp-{item['send_queue_id']}"
+    conn.execute(
+        """
+        INSERT INTO daily_send_ledger (
+            date_local, timezone, sent_at_utc, sent_at_local, sender_email, sender_domain,
+            campaign_id, lead_id, recipient_email, subject, status, smtp_message_id, app_message_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent', ?, ?)
+        """,
+        (
+            now_local.date().isoformat(),
+            timezone,
+            now_utc,
+            now_local.isoformat(timespec="seconds"),
+            sender,
+            sender_domain,
+            item["campaign_id"],
+            item["lead_id"],
+            item["recipient_email"],
+            item["subject"],
+            smtp_message_id,
+            app_message_id,
+        ),
+    )
+    conn.execute(
+        """
+        INSERT INTO sent_history (
+            send_queue_id, lead_id, campaign_id, sender_email, recipient_email, subject, body,
+            sent_at_utc, smtp_message_id, app_message_id, smtp_result
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            item["send_queue_id"],
+            item["lead_id"],
+            item["campaign_id"],
+            sender,
+            item["recipient_email"],
+            item["subject"],
+            item["body"],
+            now_utc,
+            smtp_message_id,
+            app_message_id,
+            smtp_result,
+        ),
+    )
+    conn.execute(
+        "UPDATE send_queue SET status = 'sent', sent_at = CURRENT_TIMESTAMP, error_message = '', updated_at = CURRENT_TIMESTAMP WHERE send_queue_id = ?",
+        (item["send_queue_id"],),
+    )
+    conn.execute("UPDATE leads SET status = 'sent', updated_at = CURRENT_TIMESTAMP WHERE lead_id = ?", (item["lead_id"],))
+    db.audit(conn, "smtp_send_succeeded", smtp_result, "send_queue", str(item["send_queue_id"]))
+    conn.commit()

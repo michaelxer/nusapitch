@@ -446,6 +446,13 @@ def review_queue_page(conn) -> None:
                 st.success("Dry-run send recorded in daily ledger.")
             else:
                 st.error("\n".join(problems))
+        confirm_real_send = st.checkbox("Enable real SMTP send for selected queued email")
+        if st.button("Send selected through SMTP"):
+            ok, messages = send_queue.send_real_email(conn, queue_id, confirm_real_send=confirm_real_send)
+            if ok:
+                st.success("\n".join(messages))
+            else:
+                st.error("\n".join(messages))
     else:
         st.info("No queued emails.")
 

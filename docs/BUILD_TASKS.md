@@ -24,7 +24,7 @@
 - [x] Add manual review screen.
 - [ ] Add persistent send queue.
 - [ ] Add daily send ledger and limit checks.
-- [ ] Add SMTP sending in dry-run-safe flow.
+- [x] Add SMTP sending in dry-run-safe flow.
 - [ ] Add IMAP Sent save.
 - [ ] Add reply/bounce checking.
 - [ ] Add exports and backups.

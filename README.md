@@ -53,12 +53,12 @@ Upload leads
 - Daily send ledger
 - Sender/domain/campaign limit calculation
 - Dry-run send recording
+- Confirmed SMTP send flow with sent history and ledger persistence
 - Privacy scanner for public files
 - Initial pytest coverage
 
 ## Planned V1 Work
 
-- SMTP sending behind safety gates
 - IMAP Sent save
 - Reply and bounce checking
 - Suppression list UI
