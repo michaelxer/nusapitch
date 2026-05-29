@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
@@ -24,6 +26,11 @@ RUNTIME_DIRS = [
 def ensure_runtime_dirs() -> None:
     for folder in RUNTIME_DIRS:
         folder.mkdir(parents=True, exist_ok=True)
+
+
+def load_local_env() -> None:
+    for env_file in [PROJECT_ROOT / ".env", CREDENTIALS_DIR / "llm.env", CREDENTIALS_DIR / "email.env"]:
+        load_dotenv(env_file, override=False)
 
 
 def default_db_path() -> Path:

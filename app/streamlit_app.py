@@ -13,12 +13,13 @@ if str(SRC) not in sys.path:
 
 from nusapitch import ai, backups, db, email_client, imports, privacy, profiles, replies, research, suppression  # noqa: E402
 from nusapitch import queue as send_queue  # noqa: E402
-from nusapitch.paths import DATA_DIR, default_db_path, ensure_runtime_dirs  # noqa: E402
+from nusapitch.paths import DATA_DIR, default_db_path, ensure_runtime_dirs, load_local_env  # noqa: E402
 
 
 st.set_page_config(page_title="NusaPitch", page_icon=None, layout="wide")
 
 ensure_runtime_dirs()
+load_local_env()
 DB_PATH = db.init_db()
 
 
